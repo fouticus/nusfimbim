@@ -168,5 +168,7 @@ sim <- function(p, ws, zs){
 }
 
 # Run each simulation. 
-mcmapply(sim, ps, wss, zss, mc.cores=cores)
+params <- expand.grid(ps, wss, zss)
+colnames(params) <- c("p", "ws", "zs")
+mclapply(1:nrow(params), function(i) {do.call(sim, as.list(params[i,]))}, mc.cores=cores)
 
