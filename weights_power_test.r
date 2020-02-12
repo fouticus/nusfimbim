@@ -33,10 +33,11 @@ diag_stat <- function(X){
 }
 
 # sampling parameters
-N <- 1000   # number of samples per weight
+N <- 10000   # number of samples per weight
 burnin <- 1000  # burn in before sampling
 thin <- 1000   # thinning
-ps <- c(-10, -8, -4, -2, -1, -0.5, 0, 0.5, 1, 2, 4, 6, 8, 10)  # which powers to evaluate
+ps <- c(-20, -10, -8, -4, -2, -1, -0.5, 0, 0.5, 1, 2, 4, 6, 8, 10, 20)  # which powers to evaluate
+cores <- 1
 
 ########################
 ####### Sampling #######
@@ -84,13 +85,14 @@ sim <- function(p){
   return(df)
 }
 
-dfs <- mclapply(ps, sim, mc.cores=1)
+dfs <- mclapply(ps, sim, mc.cores=cores)
 df <- do.call(rbind, dfs)
+write.csv(df, file.path(output_dir, pu("df.csv")))
 
 
 # Visualize with histogram:
 ggplot(df, aes(x=stat, y=..count.., fill=p)) + 
   geom_histogram(alpha=0.4, color="black", bins=100, position="identity") +
   labs(title=bquote('Sampling under weights'~W^p), x="Statistic", y="Frequency")
-ggsave(pu("sample.png"), path="output", width=12, height=5)
+ggsave(pu("sample.png"), path=output_dir, width=12, height=5)
 
