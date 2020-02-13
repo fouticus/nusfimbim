@@ -36,7 +36,7 @@ wss <- c("uniform", "runif", "exp", "runif2")  # weighting schemes
 zss <- c("none", "runif.1", "runif.25", "runif.50", "tri.1", "tri.25", "tri.50")  # zero schemes
 N <- 10000  # iterations per case
 lm <- 5000  # Max lag in autocorrelation plots
-cores <- 1  # number of cores to parallelize over (must be 1 on Windows)
+cores <- 6  # number of cores to parallelize over (must be 1 on Windows)
 
 ########################
 ####### Sampling #######

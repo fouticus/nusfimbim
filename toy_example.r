@@ -31,7 +31,7 @@ pu <- function(...){
 N <- 1000   # number of samples per weight
 burnin <- 10000  # burn in before sampling
 thin <- 10000   # thinning
-cores <- 1
+cores <- 2  # cores to use. Must be 1 for Windows. 2 is max that makes sense in this script
 
 ########################
 ####### Sampling #######
