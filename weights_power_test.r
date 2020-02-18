@@ -22,6 +22,7 @@ heat <- function(X){
     geom_tile(aes(fill=value)) + scale_fill_gradient2() 
 }
 output_dir <- file.path("output", "weights_power")
+dir.create(output_dir, showWarnings=F)
 
 pu <- function(...){
   paste("wp", ..., sep="_")
@@ -30,6 +31,16 @@ pu <- function(...){
 diag_stat <- function(X){
   ones <- which(X==1, arr.ind=T)
   return(sum(abs(ones[,1] - ones[,2])))
+}
+hetero_stat <- function(Xs){
+  # heterogeneity of the matrix
+  # This is a cumulative statistic, so it needs full state history to compute
+  p <- mean(Xs[,,1])  # density of the matrix (unchanged)
+  N <- dim(Xs)[3]
+  nm <- prod(dim(Xs)[1:2])
+  Xsc <- aperm(apply(Xs, 1:2, cumsum), c(2,3,1))  # cumsum each element
+  thetas <- sapply(1:N, function(i){sum((Xsc[,,i]/i - p)^2)/nm})
+  return(thetas)
 }
 
 # sampling parameters
@@ -81,7 +92,9 @@ sim <- function(p){
   
   # compute summary stats
   stats <- apply(As, 3, diag_stat)
-  df <- data.frame(p=as.factor(rep(p,N)), iter=1:N, stat=stats)
+  hetero <- hetero_stat(As)
+  
+  df <- data.frame(p=as.factor(rep(p,N)), iter=1:N, stat=stats, hetero)
   write.csv(df, file.path(output_dir, pu(p, "df.csv")))
   return(df)
 }
