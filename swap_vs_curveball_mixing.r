@@ -20,23 +20,63 @@ heat <- function(X, title=""){
     labs(title=title)
 }
 output_dir <- file.path("output", "swap_vs_curveball")
+dir.create(output_dir, showWarnings=F)
 pu <- function(...){
   paste("svc", ..., sep="_")
 }
 
 diag_stat <- function(X){
+  # computes stat on single matrix
   ones <- which(X==1, arr.ind=T)
   return(sum(abs(ones[,1] - ones[,2])))
 }
+hetero_stat <- function(Xs){
+  # heterogeneity of the matrix
+  # This is a cumulative statistic, so it needs full state history to compute
+  p <- mean(Xs[,,1])  # density of the matrix (unchanged)
+  N <- dim(Xs)[3]
+  nm <- prod(dim(Xs)[1:2])
+  Xsc <- aperm(apply(Xs, 1:2, cumsum), c(2,3,1))  # cumsum each element
+  thetas <- sapply(1:N, function(i){sum((Xsc[,,i]/i - p)^2)/nm})
+  return(thetas)
+}
+pref_attach <- function(n, m, dn, mf=5){
+  # preferential attachment model
+  # Treat as undirected, then create bipartite network
+  # n, m: dimensions of desired matrix
+  # dn: number of neighbors for each added row node
+  # mf: multiplicative factor, how much bigger to make the full matrix?
+  D <- (n+m)*mf
+  X <- matrix(0, D, D)
+  X[1,1] <- 1
+  for(i in 2:D){
+    prev_degs <- rowSums(X[1:(i-1),1:(i-1), drop=F])
+    probs <- prev_degs/sum(prev_degs)
+    for(j in 1:min(i-1, dn)){
+      idx <- which(rmultinom(1, 1, probs)==1)
+      X[i, idx] <- X[idx, i] <- X[idx, i] + 1
+      probs[idx] <- 0
+      probs <- probs/sum(probs)
+    }
+  }
+  perm <- sample(D)
+  X <- X[perm, perm]
+  return(X[1:n,(n+1):(n+m)])
+}
+#pl <- pref_attach(20, 20, 2, mf=1)
+#hist(pl)
+#rowSums(pl)
+#colSums(pl)
+
 
 # sim parameters
 n <- m <- 50 # size of matrix
 ps <- c(0.1, 0.25, 0.5, 0.75, 0.9) # fill densities of A
-wss <- c("uniform", "runif", "exp", "runif2")  # weighting schemes
-zss <- c("none", "runif.1", "runif.25", "runif.50", "tri.1", "tri.25", "tri.50")  # zero schemes
+wss <- c("uniform", "runif", "exp", "runif2", "power")  # weighting schemes
+zss <- c("none", "runif.10", "runif.25", "runif.50", "tri.10", "tri.25", "tri.50")  # zero schemes
 N <- 10000  # iterations per case
 lm <- 5000  # Max lag in autocorrelation plots
-cores <- 6  # number of cores to parallelize over (must be 1 on Windows)
+cores <- 8  # number of cores to parallelize over (must be 1 on Windows)
 
 ########################
 ####### Sampling #######
@@ -124,7 +164,7 @@ sim <- function(p, ws, zs){
   }
   saveRDS(A2s, file.path(output_dir, pu(case, "A2s.rds")))
 
-  # compute statistic for each matrix
+  # compute diag statistic for each matrix
   ds1 <- apply(A1s, 3, diag_stat)
   ds2 <- apply(A2s, 3, diag_stat)
   
@@ -142,11 +182,19 @@ sim <- function(p, ws, zs){
   diss1 <- apply(A1s, c(3), function(X){sum(abs(X-A))})
   diss2 <- apply(A2s, c(3), function(X){sum(abs(X-A))})
   
+  # compute heterogeneity statistic
+  hetero_1 <- hetero_stat(A1s)
+  hetero_2 <- hetero_stat(A2s)
+  
   # make dataframe
-  df <- data.frame(method=c(rep("Swap",N), rep("Curveball",N)), iter=rep(1:N,2), stat=c(ds1, ds2), dissim=c(diss1, diss2))
+  df <- data.frame(method=c(rep("Swap",N), rep("Curveball",N)), iter=rep(1:N,2), stat=c(ds1, ds2), dissim=c(diss1, diss2), hetero=c(hetero_1, hetero_2))
   write.csv(df, file.path(output_dir, pu(case, "df.csv")))
   
   # Plots
+  ggplot(df, aes(x=iter, y=hetero, color=method)) + geom_point() + geom_line() + 
+    labs(title="Heterogeneity")
+  ggsave(pu(case, "traj_heterogeneity.png"), path=output_dir, height=5, width=30)
+  
   ggplot(df, aes(x=iter, y=stat, color=method)) + geom_point() + geom_line() + 
     labs(title=paste0("Effective Sample Sizes, Swap: ", ess1, " Curveball: ", ess2))
   ggsave(pu(case, "traj_stat.png"), path=output_dir, height=5, width=30)
