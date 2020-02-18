@@ -8,7 +8,7 @@
 #####################
 
 library(reshape2)
-
+library(itsmr)
 
 #########################
 ####### Functions #######
@@ -154,16 +154,22 @@ curveball_trade <- function(A, W){
   rows <- sample(1:nrow(A))
   r1 <- A[rows[1],]
   r2 <- A[rows[2],]
+  w1 <- W[rows[1],]
+  w2 <- W[rows[2],]
   # get columns shared and not shared
   A12 <- which(r1+r2==2)  # Shared between r1 and r2
-  A1m2 <- which(r1-r2>0); A1m2  # in r1 but not r2
-  A2m1 <- which(r2-r1>0); A2m1  # in r2 but not r1
+  A1m2 <- which(r1-r2>0 & w2>0)  # in r1 but not r2 (and not a struct zero in 2)
+  A2m1 <- which(r2-r1>0 & w1>0)  # in r2 but not r1 (and not a struct zero in 1)
+  
+  A1m2sz <- which(r1-r2>0 & w2==0)  # in r1 but not r2 (and a struct zero in 2)
+  A2m1sz <- which(r2-r1>0 & w1==0)  # in r2 but not r1 (and a struct zero in 1)
+  
   # Check if can trade
   can_trade <- !(length(A1m2)==0 | length(A2m1)==0)
   if(!can_trade){
     return(A)
   }
-  # shuffle the non-shared indices
+  # shuffle the tradable indices
   B <- sample(c(A1m2, A2m1))
   B1m2 <- B[1:length(A1m2)]
   B2m1 <- B[(length(A1m2)+1):length(B)]
@@ -174,9 +180,9 @@ curveball_trade <- function(A, W){
   if(runif(1) < p_trade){
     # construct traded rows
     r1B <- rep(0, length(r1))
-    r1B[c(A12, B1m2)] <- 1; r1B
-    r2B <- rep(0, length(r1))
-    r2B[c(A12, B2m1)] <- 1; r2B
+    r1B[c(A12, A1m2sz, B1m2)] <- 1  # shared 1's, sz 1's, and traded 1's
+    r2B <- rep(0, length(r2))
+    r2B[c(A12, A2m1sz, B2m1)] <- 1  # shared 1's, sz 1's, and traded 1's
     
     A[rows[1],] <- r1B
     A[rows[2],] <- r2B
@@ -184,3 +190,29 @@ curveball_trade <- function(A, W){
   return(A)
 }
 
+### Other functions
+
+TH_se <- function(x){
+  # estimate monte carlo standard error
+  wn <- function(k, bn){
+    # Blackman-Tukey window
+    a <- 1/4  # Makes this the Tukey-Hanning window
+    return((1 - 2*a + 2*a*cos(pi*abs(k)/bn)) * (1*(abs(k)<bn)))
+  }
+  m <- length(x)
+  nu <- 0.5  # convenient choice to satisfy theorem assumptions
+  gammas <- acvf(x, h=m-1)
+  ns <- 1:m
+  sig2_hat <- numeric(m)
+  for(i in 1:length(ns)){
+    n <- ns[i]
+    bn <- floor(n^nu)
+    ws <- wn(0:(m-1), bn)
+    sig2_hat[[i]] <- sum(ws*gammas)
+  }
+  return(sig2_hat)
+}
+
+#L <- 1000
+#x <- rnorm(L, sd=4)
+#plot(TH_se(x), type="l")
