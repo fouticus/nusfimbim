@@ -22,6 +22,7 @@ heat <- function(X){
     geom_tile(aes(fill=value)) + scale_fill_gradient2() 
 }
 output_dir <- file.path("output", "toy_example")
+dir.create(output_dir, showWarnings=F)
 
 pu <- function(...){
   paste("te", ..., sep="_")
