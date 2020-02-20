@@ -10,6 +10,9 @@
 
 rm(list=ls())
 
+source('functions.r')
+library(dplyr)
+library(tidyr)
 library(ggplot2)
 
 
@@ -34,15 +37,35 @@ SC <- read.csv(file=file.path(output_dir, pu(method, "SC.csv")))
 SP <- read.csv(file=file.path(output_dir, pu(method, "SP.csv")))
 KLD <- read.csv(file=file.path(output_dir, pu(method, "KLD.csv")))
 df <- read.csv(file=file.path(output_dir, pu(method, "df.csv")))
+N <- nrow(S)
+
+# cross reference for state names
+letters <- list("1,0,0,0,1,0,0,0,1" = "A",
+                "0,1,0,1,0,0,0,0,1" = "B",
+                "1,0,0,0,0,1,0,1,0" = "C", 
+                "0,0,1,0,1,0,1,0,0" = "D",
+                "0,0,1,1,0,0,0,1,0" = "E",
+                "0,1,0,0,0,1,1,0,0" = "F")
 
 # print out probs for each state
 state_names <- df$X
 for(name in state_names){
-  print(name)
-  print(matrix(as.numeric(strsplit(name, ",")[[1]]), 3, 3))
+  print(letters[[name]])
+  #print(matrix(as.numeric(strsplit(name, ",")[[1]]), 3, 3))
   print(df[df$X == name,c("probs", "emp_probs")])
+  colname <- paste0("X", gsub(",", ".", name))
+  print(paste("SE:", round(TH_se(S[,colname])[N]/sqrt(N), 4)))
 }
 
 tail(KLD)
 
+# Estimate Standard errors for each probability
+SEs <- S[,2:ncol(S)]*NA
+for(i in 2:ncol(S)){
+  SEs[,i-1] <- TH_se(S[,i])
+}
 
+
+matplot(SEs, type='l')
+
+# Save to file
