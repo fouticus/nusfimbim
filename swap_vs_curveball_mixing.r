@@ -12,6 +12,7 @@ rm(list=ls())
 source("functions.r")
 library(ggplot2)
 library(parallel)
+library(VGAM)  # provides the Zeta function
 
 heat <- function(X, title=""){
   df <- melt(X)
@@ -67,13 +68,125 @@ pref_attach <- function(n, m, dn, mf=5){
 #hist(pl)
 #rowSums(pl)
 #colSums(pl)
+  
+gayle_ryser <- function(p, q){
+  p <- p[order(-p)]
+  q <- q[order(-q)]
+  # condition for existence of a matrix with margins p and q
+  if(sum(p) != sum(q)){
+    return(F)
+  }
+  pstar <- sapply(1:max(p), function(i){sum(p>=i)})
+  k <- min(length(pstar), length(q))
+  q_cs <- cumsum(q)
+  pstar_cs <- cumsum(pstar)
+  return(all(q_cs[1:k] <= pstar_cs[1:k]))
+}
+
+naive_matrix_from_margins <- function(rsums, csums){
+  if(!gayle_ryser(rsums, csums)){return(1)}
+  rsums <- rsums[order(-rsums)]
+  csums <- csums[order(-csums)]
+  # construct matrix
+  n <- length(rsums)
+  m <- length(csums)
+  X <- matrix(0, n, m)
+  i <- j <- 1
+  while(i <= n & j <=m){
+    #print(paste(i, j))
+    rsums[i]
+    if(rsums[i] > 0){
+      X[i,j] <- 1
+      rsums[i] <- rsums[i]-1
+      csums[j] <- csums[j]-1
+      if(sum(csums) == 0){break}
+      j <- min(which(csums>0 & X[i,]==0))
+    } else {
+      j <- min(which(csums>0), m+1)
+      i <- i + 1
+    }
+  }
+  # swap a bunch to randomize
+  W <- (X+1)/(X+1)
+  for(i in 1:(sum(X)*10)){
+    X <- swap(X, W)
+  }
+  return(X)
+}
+
+block_matrix <- function(block_size, block_deg){
+  rsums <- csums <- unlist(lapply(1:length(block_size), 
+                                  function(k){rep(block_deg[k], block_size[k])}))
+  return(naive_matrix_from_margins(rsums, csums))
+}
+block_matrix(c(4,1),c(4,1))
+
+nonrandom_power_law_square_matrix <- function(n, fill=0.1, p=1.5){
+  # determine kmax
+  s1 <- (1:n)^(1-p)
+  s2 <- (1:n)^(-p)
+  f <- sapply(1:n, function(i){sum(s1[1:i])/sum(s2[1:i])})
+  row_dens <- n*fill
+  kmax <- which(abs(f-row_dens) == min(abs(f-row_dens)))
+  # create margins
+  s <- n/sum((1:kmax)^(-p))
+  c <- round(s*(1:kmax)^(-p))  # have to round this.
+  ndiff <- n-sum(c)
+  if(ndiff != 0){
+    ab <- abs(ndiff)
+    c[1:ab] <- c[1:ab] + ndiff/ab  # make up the difference
+  }
+  rsums <- csums <- unlist(lapply(kmax:1, function(k){rep(k, c[k])}))
+  return(naive_matrix_from_margins(rsums, csums))
+}
+p<- 2.0; fill<-0.1; X <- nonrandom_power_law_square_matrix(n, fill, p); rowSums(X); colSums(X); mean(X)
+#
+power_law_matrix <- function(n, m, p=2){
+  # create margins
+  rsums <- rzeta(n, p)
+  csums <- rzeta(m, p)
+  rs <- sum(rsums)
+  cs <- sum(csums)
+  # prune until they have the same sum
+  if(rs < cs){
+    d <- cs - rs
+    for(i in 1:d){
+      idx <- which(csums > 1)
+      if(length(idx)>1){
+        idx <- sample(idx, 1)
+      }
+      csums[idx] <- csums[idx] - 1
+    }
+  } else if (cs < rs){
+    d <- rs - cs
+    for(i in 1:d){
+      idx <- which(rsums > 1)
+      if(length(idx)>1){
+        idx <- sample(idx, 1)
+      }
+      rsums[idx] <- rsums[idx] - 1
+    }
+  }
+  return(naive_matrix_from_margins(rsums, csums))
+}
+#p=1.5; X <- power_law_matrix(n, m, p); colSums(X); rowSums(X)
 
 
-# sim parameters
+## sim parameters ##
 n <- m <- 50 # size of matrix
+# for density based A
 ps <- c(0.1, 0.25, 0.5, 0.75, 0.9) # fill densities of A
+# for deterministic power law A
+pows <- c(0.5, 1.0, 1.5, 2.0)  # power to use for power law margins
+fill <- 0.1  # desired density for the power law margins (can't always achieve this)
+# for block defined A
+block_size <- c(10, 40)
+block_deg <- c(10, 1)
+# weights for W's
 wss <- c("uniform", "runif", "exp", "runif2", "power")  # weighting schemes
+# struct zero schemes
 zss <- c("none", "runif.10", "runif.25", "runif.50", "tri.10", "tri.25", "tri.50")  # zero schemes
+# MCMC stuff
 N <- 10000  # iterations per case
 lm <- 5000  # Max lag in autocorrelation plots
 cores <- 8  # number of cores to parallelize over (must be 1 on Windows)
@@ -83,7 +196,6 @@ cores <- 8  # number of cores to parallelize over (must be 1 on Windows)
 ########################
 
 set.seed(utf8ToInt("Root, root for the home team!"))
-
 
 # Create A's, W's, and Z's
 
@@ -129,14 +241,43 @@ for(p in ps){
   heat(A, paste0("Ones: ", sum(A), "(", sum(A)/(n*m), "%)"))
   ggsave(pu(p, "A.png"), path=output_dir, height=5, width=6)
   write.csv(A, file.path(output_dir, pu(p, "A.csv")))
-  As[[as.character(p)]] <- A 
+  As[[paste0("rand", p)]] <- A 
 }
+#for(i in 1:npow){
+#  # random power law distributed margins
+#  A <- power_law_matrix(n, m, pow)
+#  # pre burn in this matrix since it was created deterministically
+#  for(j in 1:(10*sum(A))){
+#    A <- swap(A, Ws[["uniform"]])
+#  }
+#  heat(A, paste0("Ones: ", sum(A), "(", sum(A)/(n*m), "%)"))
+#  ggsave(pu("pow", i, "A.png"), path=output_dir, height=5, width=6)
+#  write.csv(A, file.path(output_dir, pu("pow", i, "A.csv")))
+#  As[[paste("pow", i, sep="_")]] <- A 
+#}
+for(pow in pows){
+  # deterministic power law margins (assumes n=m)
+  A <- nonrandom_power_law_square_matrix(n, fill, pow)
+  heat(A, paste0("Ones: ", sum(A), "(", sum(A)/(n*m), "%)"))
+  powpre <- paste("pow", fill, pow, sep="-")
+  ggsave(pu(powpre, "A.png"), path=output_dir, height=5, width=6)
+  write.csv(A, file.path(output_dir, pu(powpre, "A.csv")))
+  As[[powpre]] <- A 
+}
+# block defined A (assumes n=m)
+A <- block_matrix(block_size, block_deg)
+heat(A, paste0("Ones: ", sum(A), "(", sum(A)/(n*m), "%)"))
+ggsave(pu("block_A.png"), path=output_dir, height=5, width=6)
+write.csv(A, file.path(output_dir, pu("block", "A.csv")))
+As[["block"]] <- A 
 
-sim <- function(p, ws, zs){
-  case <- paste(p, ws, zs, sep="_")
+as <- names(As)
+
+sim <- function(as, ws, zs){
+  case <- paste(as, ws, zs, sep="_")
   print(case)
   # get relevant matrices
-  A <- As[[as.character(p)]]
+  A <- As[[as]]
   W <- Ws[[ws]]
   Z <- Zs[[zs]]
   A <- A*Z
@@ -216,7 +357,7 @@ sim <- function(p, ws, zs){
 }
 
 # Run each simulation. 
-params <- expand.grid(ps, wss, zss)
+params <- expand.grid(as, wss, zss)
 colnames(params) <- c("p", "ws", "zs")
 mclapply(1:nrow(params), function(i) {do.call(sim, as.list(params[i,]))}, mc.cores=cores)
 
