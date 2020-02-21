@@ -119,7 +119,7 @@ block_matrix <- function(block_size, block_deg){
                                   function(k){rep(block_deg[k], block_size[k])}))
   return(naive_matrix_from_margins(rsums, csums))
 }
-block_matrix(c(4,1),c(4,1))
+#block_matrix(c(4,1),c(4,1))
 
 nonrandom_power_law_square_matrix <- function(n, fill=0.1, p=1.5){
   # determine kmax
@@ -139,7 +139,7 @@ nonrandom_power_law_square_matrix <- function(n, fill=0.1, p=1.5){
   rsums <- csums <- unlist(lapply(kmax:1, function(k){rep(k, c[k])}))
   return(naive_matrix_from_margins(rsums, csums))
 }
-p<- 2.0; fill<-0.1; X <- nonrandom_power_law_square_matrix(n, fill, p); rowSums(X); colSums(X); mean(X)
+#p<- 2.0; fill<-0.1; X <- nonrandom_power_law_square_matrix(n, fill, p); rowSums(X); colSums(X); mean(X)
 #
 power_law_matrix <- function(n, m, p=2){
   # create margins
@@ -188,8 +188,9 @@ wss <- c("uniform", "runif", "exp", "runif2", "power")  # weighting schemes
 zss <- c("none", "runif.10", "runif.25", "runif.50", "tri.10", "tri.25", "tri.50")  # zero schemes
 # MCMC stuff
 N <- 10000  # iterations per case
+#N <- 100  # iterations per case
 lm <- 5000  # Max lag in autocorrelation plots
-cores <- 8  # number of cores to parallelize over (must be 1 on Windows)
+cores <- 7  # number of cores to parallelize over (must be 1 on Windows)
 
 ########################
 ####### Sampling #######
@@ -358,6 +359,6 @@ sim <- function(as, ws, zs){
 
 # Run each simulation. 
 params <- expand.grid(as, wss, zss)
-colnames(params) <- c("p", "ws", "zs")
+colnames(params) <- c("as", "ws", "zs")
 mclapply(1:nrow(params), function(i) {do.call(sim, as.list(params[i,]))}, mc.cores=cores)
 
