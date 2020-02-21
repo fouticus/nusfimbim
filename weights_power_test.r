@@ -49,7 +49,7 @@ burnin <- 5000  # burn in before sampling
 thin <- 1000   # thinning
 #ps <- c(-300, -100, -30, -20, -10, -8, -6, -4, -2, -1, -0.5, 0, 0.5, 1, 2, 4, 6, 8, 10, 20, 30, 100, 300)  # which powers to evaluate
 ps <- c(-10, -8, -6, -4, -3, -2, -1, -0.5, 0, 0.5, 1, 2, 3, 4, 6, 8, 10)  # which powers to evaluate
-cores <- 8  # Number of cores to use, Must be 1 for Windows
+cores <- 7  # Number of cores to use, Must be 1 for Windows
 
 ########################
 ####### Sampling #######
