@@ -210,7 +210,7 @@ TH_se <- function(x){
     ws <- wn(0:(m-1), bn)
     sig2_hat[[i]] <- sum(ws*gammas)
   }
-  return(sig2_hat)
+  return(sqrt(sig2_hat))
 }
 
 #L <- 1000
