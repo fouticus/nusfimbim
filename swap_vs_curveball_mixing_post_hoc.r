@@ -12,6 +12,7 @@ rm(list=ls())
 library(dplyr)
 library(ggplot2)
 library(viridis)
+library(parallel)
 theme_set(theme_minimal())
 options(ggplot2.continuous.colour="viridis")
 options(ggplot2.continuous.fill = "viridis")
@@ -23,6 +24,8 @@ pu <- function(...){
   paste("svc_post", ..., sep="_")
 }
 
+cores <- 7
+
 
 ########################
 ####### Post Hoc #######
@@ -32,8 +35,9 @@ lf <- list.files(output_dir)
 df_files <- lf[grep("df.csv", lf)]
 
 dfs <- list()
-for(i in 1:length(df_files)){
-  df_file <- df_files[[i]]
+proc_file <- function(df_file){
+#for(i in 1:length(df_files)){
+#  df_file <- df_files[[i]]
   print(df_file)
   params <- strsplit(df_file, "_")[[1]]
   df <- read.csv(file.path(output_dir, df_file), colClasses=c("NULL","factor","integer","integer","integer", "numeric"))
@@ -73,8 +77,10 @@ for(i in 1:length(df_files)){
     }
     df[df$method==method,c("ess")] <- ess
   }
-  dfs[[i]] <- df
+  return(df)
+#  dfs[[i]] <- df
 }
+dfs <- mclapply(df_files, proc_file, mc.cores=cores)
 df <- do.call(rbind, dfs)
 write.csv(df, file=file.path(output_dir, pu("df.csv")))
 
