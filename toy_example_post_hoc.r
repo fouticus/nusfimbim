@@ -14,6 +14,7 @@ source('functions.r')
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(mcmcse)
 
 
 output_dir <- file.path("output", "toy_example")
@@ -27,7 +28,7 @@ pu <- function(...){
 ########################
 
 method <- "swap"
-method <- "curveball"
+#method <- "curveball"
 
 
 # read stuff
@@ -55,6 +56,7 @@ for(name in state_names){
   print(df[df$X == name,c("probs", "emp_probs")])
   colname <- paste0("X", gsub(",", ".", name))
   print(paste("SE:", round(TH_se(S[,colname])[N]/sqrt(N), 4)))
+  #print(paste("SE2:", round(mcse(S[,colname])$se, 4)))
 }
 
 tail(KLD)
@@ -64,6 +66,8 @@ SEs <- S[,2:ncol(S)]*NA
 for(i in 2:ncol(S)){
   SEs[,i-1] <- TH_se(S[,i])
 }
+
+# alternative method for computing standard errors
 
 
 matplot(SEs, type='l')
