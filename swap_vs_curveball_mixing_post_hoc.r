@@ -13,6 +13,8 @@ library(dplyr)
 library(ggplot2)
 library(viridis)
 library(parallel)
+library(coda)
+library(LaplacesDemon)
 theme_set(theme_minimal())
 options(ggplot2.continuous.colour="viridis")
 options(ggplot2.continuous.fill = "viridis")
@@ -37,7 +39,7 @@ df_files <- lf[grep("df.csv", lf)]
 dfs <- list()
 proc_file <- function(df_file){
 #for(i in 1:length(df_files)){
-#  df_file <- df_files[[i]]
+  #df_file <- df_files[[i]]
   print(df_file)
   params <- strsplit(df_file, "_")[[1]]
   df <- read.csv(file.path(output_dir, df_file), colClasses=c("NULL","factor","integer","integer","integer", "numeric"))
@@ -71,11 +73,15 @@ proc_file <- function(df_file){
     # Effective sample size at each step
     stat <- df[df$method==method,c("stat")]
     N <- length(stat)
-    ess <- rep(0, N) 
+    #ess <- rep(0, N) 
+    ess_coda <- rep(0, N) 
+    #ess_LaplacesDemon <- rep(0, N) 
     for(j in 2:N){ # step j
-      ess[j] <- 1/(1+2*sum(acf(stat[1:j], lag.max=N, plot=F)$acf))
+      #ess[j] <- 1/(1+2*sum(rho))
+      ess_coda[j] <- coda::effectiveSize(stat[1:j])
+      #ess_LaplacesDemon[j] <- LaplacesDemon::ESS(stat[1:j]) # gives the same as coda
     }
-    df[df$method==method,c("ess")] <- ess
+    df[df$method==method,c("ess")] <- ess_coda
   }
   return(df)
 #  dfs[[i]] <- df
