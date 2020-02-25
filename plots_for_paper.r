@@ -1,6 +1,6 @@
 # File: plots_for_paper.r
 # Author: Alex Fout (fout@colostate.edu)
-# Purpose: Create final graphics for FODS paper
+# Puroose: Create final graphics for FODS paper
 
 
 #####################
@@ -14,6 +14,7 @@ library(ggplot2)
 library(grid)
 library(reshape2)
 library(viridis)
+library(latex2exp)
 theme_set(theme_minimal() + theme(axis.ticks=element_line()))
 options(ggplot2.continuous.colour="viridis")
 options(ggplot2.continuous.fill = "viridis")
@@ -74,7 +75,7 @@ power_lab <- function(ps){
   paste("Power:", ps, sep="\n")
 }
 zeros_labels <- as_labeller(c(runif="Random Zeros", tri="Triangle Zeros", none="None"))
-weight_labels <- as_labeller(c(exp="Exp(1)", power="Power", runif="Uniform(0,1)", runif2="Uniform"))
+weight_labels <- as_labeller(c(exp="Exp(1)", power="Power", runif="Uniform(0,1)", runif2="Uniform(0.5,1)", uniform="All 1's"))
 colors1 <- scale_color_manual(name="Percent Structural Zeros", values=c("black", "blue", "green", "red"))
 colors2 <- scale_color_manual(name="Percent Structural Zeros", values=rep("black", 4))
 colors3 <- scale_color_manual(name="Matrix Fill", values=c("black", "blue", "green", "orange", "red"))
@@ -96,11 +97,16 @@ scaley2 <- scale_y_continuous(breaks=seq(0, 1250, 500))
 ####### Make Graphics #######
 #############################
 
+###################
 ### toy example ###
-# no plots
+###################
+
+### no plots
 
 
+###################
 ### mixing test ###
+###################
 
 ## Adjacency matrices ##
 {
@@ -188,117 +194,114 @@ for(ws_ in wss){
 #
 
 
-df_mix %>% filter(as1=="rand", as2=="0.25", zs1=="runif") %>%
+df_mix %>% filter(as1=="rand", as2=="0.25", zs1=="runif", !ws %in% "power" ) %>%
   group_by(as1, as2, zs1, ws, method) %>% 
   sample_frac(size=0.05) %>% 
   ggplot(aes(x=iter, y=ess, color=method, linetype=method)) + geom_line(size=0.75) + 
-  facet_grid(ws~zs2, scales="fixed", labeller=labeller(as2=zero_perc)) + 
-  scale_color_manual("Matrix Fill", values=c("#4275f5", "#ff2424", "#29a300")) +
-  linetype1 + labs1 + rotatefacets
-df_mix %>% ggplot(aes(ess)) + geom_histogram()
-
-ggsave(file.path(output_dir, pu("uniform-weight__random-fill__triangle-zeros__perc_zero_vs_perc_fill__hetero__xsmall.png")), height=1.5, width=1.5)
-ggsave(file.path(output_dir, pu("uniform-weight__random-fill__triangle-zeros__perc_zero_vs_perc_fill__hetero__small.png")), height=3, width=3)
-ggsave(file.path(output_dir, pu("uniform-weight__random-fill__triangle-zeros__perc_zero_vs_perc_fill__hetero__medium.png")), height=5, width=5)
-ggsave(file.path(output_dir, pu("uniform-weight__random-fill__triangle-zeros__perc_zero_vs_perc_fill__hetero__large.png")), height=8, width=8)
-
-
-
-
-
-
-
-
-
-
-
-
+  facet_grid(ws~zs2, scales="fixed", 
+             labeller=labeller(ws=weight_labels, zs2=make_percent)) + 
+  scale_color_manual("Method", values=c("#4275f5", "#ff2424")) +
+  scale_linetype_manual(name="Method", values=c("solid", "dashed")) + 
+  labs(x="Iteration", y="Effective Sample Size") + 
+  scale_x_continuous(breaks=c(0, 2500, 5000, 7500, 10000)) + 
+  scale_y_continuous(breaks=c(0, 25, 50), limits=c(0,50)) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), # rotate x labels
+        strip.text.y=element_text(size=12, angle=0),  # rotate facets
+        strip.text.x = element_text(size=12),
+        legend.position="bottom", 
+        legend.text = element_text(size=11),
+        legend.title = element_text(size=12),
+        panel.spacing = unit(0.1, "cm"), 
+        panel.border=element_rect(fill=NA),
+        axis.text=element_text(size=12,face="bold"),
+        axis.title=element_text(size=14,face="bold"),
+        )
+ggsave(file.path(output_dir, pu("ess_random_zeros.png")), height=8, width=8, dpi="retina")
 
 
+df_mix %>% filter(as1=="rand", as2=="0.25", zs1=="tri", !ws %in% "power" ) %>%
+  group_by(as1, as2, zs1, ws, method) %>% 
+  sample_frac(size=0.05) %>% 
+  ggplot(aes(x=iter, y=ess, color=method, linetype=method)) + geom_line(size=0.75) + 
+  facet_grid(ws~zs2, scales="fixed", 
+             labeller=labeller(ws=weight_labels, zs2=make_percent)) + 
+  scale_color_manual("Method", values=c("#4275f5", "#ff2424")) +
+  scale_linetype_manual(name="Method", values=c("solid", "dashed")) + 
+  labs(x="Iteration", y="Effective Sample Size") + 
+  scale_x_continuous(breaks=c(0, 2500, 5000, 7500, 10000)) + 
+  scale_y_continuous(breaks=c(0, 25, 50), limits=c(0,50)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), # rotate x labels
+        strip.text.y=element_text(size=12, angle=0),  # rotate facets
+        strip.text.x = element_text(size=12),
+        legend.position="bottom", 
+        legend.text = element_text(size=11),
+        legend.title = element_text(size=12),
+        panel.spacing = unit(0.1, "cm"), 
+        panel.border=element_rect(fill=NA),
+        axis.text=element_text(size=12,face="bold"),
+        axis.title=element_text(size=14,face="bold"),
+        )
+ggsave(file.path(output_dir, pu("ess_triangle_zeros.png")), height=8, width=8, dpi="retina")
+
+###
 
 
 
 
 
 
-
-
-
-
+##########################
 ### weights power test ###
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+##########################
+
+
+A_pow <- readRDS(file.path(weights_dir, "wp_A.rds"))
+W_pow <- readRDS(file.path(weights_dir, "wp_W.rds"))
+
+plot_01(A_pow)
+ggsave(file.path(output_dir, pu("wp_A.png")), height=4, width=4, dpi="retina")
+
+plot_01(W_pow)
+ggsave(file.path(output_dir, pu("wp_W.png")), height=4, width=4, dpi="retina")
+
+
+df_pow <- read.csv(file.path(weights_dir, "wp_df.csv"))
+df_pow$p <- factor(df_pow$p, levels=-unique(df_pow$p))
+
+df_pow %>% filter(p %in% c(-10, -4, -2, 0, 2, 4, 10)) %>%
+ggplot(aes(x=stat, y=..count.., fill=p)) + 
+  geom_histogram(alpha=0.4, color="black", bins=200) +
+  scale_fill_viridis_d(name="p:") + 
+  labs(x="Diagonal Divergence", y="Frequency") + 
+  theme(legend.position="bottom", 
+        legend.key.width=unit(1,"cm"), 
+        legend.margin=margin(b = 0, unit='cm'),
+        legend.spacing.x = unit(0.6, "cm")) + 
+  guides(fill=guide_legend(nrow=1, 
+                           label.position="bottom",
+                           keywidth = 1.0,
+                           keyheight = 0.5))
+ggsave(pu("diag_sampling_dist.png"), path=output_dir, width=8, height=4, dpi="retina")
+
+# another version
+
+xs = c(15300, 17300, 19000, 20800, 22600, 24300, 26700)
+ys = c(850, 750, 700, 700, 750, 800, 850)
+texts = c("p==-10", "p==-4", "p==-2", "p==0", "p==2", "p==4", "p==10")
+
+df_pow %>% filter(p %in% c(-10, -4, -2, 0, 2, 4, 10)) %>%
+ggplot(aes(x=stat, y=..count.., fill=p)) + 
+  geom_histogram(alpha=0.8, color="black", bins=200, size=0.2) +
+  scale_fill_viridis_d(name="p:") + 
+  labs(x="Diagonal Divergence", y="Frequency") + 
+  annotate("text", x=xs, y=ys, label=texts, parse=TRUE, size=5) + 
+  theme(legend.position="none",
+        axis.text=element_text(size=12,face="bold"),
+        axis.title=element_text(size=14,face="bold"),
+        )
+ggsave(pu("diag_sampling_dist_v2.png"), path=output_dir, width=10, height=4, dpi="retina")
+
+#
 
 
 
@@ -441,3 +444,5 @@ ggsave(file.path(output_dir, pu("uniform-weight__power-law__uniform-zeros__perc_
 ggsave(file.path(output_dir, pu("uniform-weight__power-law__uniform-zeros__perc_zero_vs_perc_fill__dissim__medium.png")), height=5, width=5)
 ggsave(file.path(output_dir, pu("uniform-weight__power-law__uniform-zeros__perc_zero_vs_perc_fill__dissim__large.png")), height=8, width=8)
 }
+
+
