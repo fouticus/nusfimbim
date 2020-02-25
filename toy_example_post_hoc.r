@@ -67,8 +67,6 @@ for(i in 2:ncol(S)){
   SEs[,i-1] <- TH_se(S[,i])
 }
 
-# alternative method for computing standard errors
-
 
 matplot(SEs, type='l')
 
