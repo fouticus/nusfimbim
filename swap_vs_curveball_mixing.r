@@ -35,8 +35,9 @@ wss <- c("uniform", "runif", "exp", "runif2", "power")  # weighting schemes
 # struct zero schemes
 zss <- c("none", "runif.10", "runif.25", "runif.50", "tri.10", "tri.25", "tri.50")  # zero schemes
 # MCMC stuff
-N <- 10000  # iterations per case
-seeds <- c(7272, 7128, 9972, 819233, 1112, 5342, 6104, 9712, 2287, 71293)
+#N <- 10000  # iterations per case
+N <- 60  # iterations per case
+seeds <- c(1272, 2728, 3972, 4133, 5112, 6342, 7104, 8712, 9287, 10293)
 lm <- 5000  # Max lag in autocorrelation plots
 cores <- 7  # number of cores to parallelize over (must be 1 on Windows)
 
