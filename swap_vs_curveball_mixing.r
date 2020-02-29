@@ -36,7 +36,7 @@ wss <- c("uniform", "runif", "exp", "runif2", "power")  # weighting schemes
 zss <- c("none", "runif.10", "runif.25", "runif.50", "tri.10", "tri.25", "tri.50")  # zero schemes
 # MCMC stuff
 N <- 10000  # iterations per case
-#N <- 100  # iterations per case
+seeds <- c(7272, 7128, 9972, 819233, 1112, 5342, 6104, 9712, 2287, 71293)
 lm <- 5000  # Max lag in autocorrelation plots
 cores <- 7  # number of cores to parallelize over (must be 1 on Windows)
 
@@ -124,85 +124,80 @@ as <- names(As)
 
 sim <- function(as, ws, zs){
   case <- paste(as, ws, zs, sep="_")
-  print(case)
-  # get relevant matrices
-  A <- As[[as]]
-  W <- Ws[[ws]]
-  Z <- Zs[[zs]]
-  A <- A*Z
-  W <- W*Z
-
-  # Do checkerboard swaps
-  A1 <- A
-  A1s <- array(0, dim=c(n, m, N))
-  A1s[,,1] <- A
-  for(i in 2:N){
-    if(i %% round(N/50) == 0){cat(".")}
-    A1 <- swap(A1, W)
-    A1s[,,i] <- A1
+  for(seed in seeds){
+    set.seed(seed)
+    
+    print(paste(case, seed))
+    # get relevant matrices
+    A <- As[[as]]
+    W <- Ws[[ws]]
+    Z <- Zs[[zs]]
+    A <- A*Z
+    W <- W*Z
+  
+    # Do checkerboard swaps
+    A1 <- A
+    A1s <- array(0, dim=c(n, m, N))
+    A1s[,,1] <- A
+    for(i in 2:N){
+      if(i %% round(N/50) == 0){cat(".")}
+      A1 <- swap(A1, W)
+      A1s[,,i] <- A1
+    }
+    saveRDS(A1s, file.path(output_dir, pu(case, seed, "A1s.rds")))
+  
+    # Do a bunch of curveball trades
+    A2 <- A
+    A2s <- array(0, dim=c(n, m, N))
+    A2s[,,1] <- A
+    for(i in 2:N){
+      if(i %% round(N/50) == 0){cat(".")}
+      A2 <- curveball_trade(A2, W)
+      A2s[,,i] <- A2
+    }
+    saveRDS(A2s, file.path(output_dir, pu(case, seed, "A2s.rds")))
+  
+    # compute diag statistic for each matrix
+    ds1 <- apply(A1s, 3, diag_stat)
+    ds2 <- apply(A2s, 3, diag_stat)
+    
+    cor(ds1[1:(N-1)], ds1[2:N])
+    
+    # compute dissimilarity
+    diss1 <- apply(A1s, c(3), function(X){sum(abs(X-A))})
+    diss2 <- apply(A2s, c(3), function(X){sum(abs(X-A))})
+    
+    # compute heterogeneity statistic
+    hetero_1 <- hetero_stat(A1s)
+    hetero_2 <- hetero_stat(A2s)
+    
+    # make dataframe
+    df <- data.frame(method=c(rep("Swap",N), rep("Curveball",N)), iter=rep(1:N,2), stat=c(ds1, ds2), dissim=c(diss1, diss2), hetero=c(hetero_1, hetero_2))
+    write.csv(df, file.path(output_dir, pu(case, seed, "df.csv")))
+    
+    # Plots
+    ggplot(df, aes(x=iter, y=hetero, color=method)) + geom_point() + geom_line() + 
+      labs(title="Heterogeneity")
+    ggsave(pu(case, seed, "traj_heterogeneity.png"), path=output_dir, height=5, width=30)
+    
+    ggplot(df, aes(x=iter, y=stat, color=method)) + geom_point() + geom_line() + 
+    ggsave(pu(case, seed, "traj_stat.png"), path=output_dir, height=5, width=30)
+    
+    ggplot(df, aes(x=iter, y=dissim, color=method)) + geom_point() + geom_line()
+    ggsave(pu(case, seed, "traj_disssim.png"), path=output_dir, height=5, width=30)
+  
+    png(file.path(output_dir, pu(case, seed, "acf_swap.png")), height=5, width=6, units="in", res=240)
+    if(max(ds1)>min(ds1)){
+      acf(ds1, lag.max=lm, main="Swap")
+    }
+    dev.off()
+    
+    png(file.path(output_dir, pu(case, seed, "acf_curveball.png")), height=5, width=6, units="in", res=240)
+    if(max(ds2)>min(ds2)){
+      acf(ds2, lag.max=lm, main="Curveball")
+    }
+    dev.off()
   }
-  saveRDS(A1s, file.path(output_dir, pu(case, "A1s.rds")))
-
-  # Do a bunch of curveball trades
-  A2 <- A
-  A2s <- array(0, dim=c(n, m, N))
-  A2s[,,1] <- A
-  for(i in 2:N){
-    if(i %% round(N/50) == 0){cat(".")}
-    A2 <- curveball_trade(A2, W)
-    A2s[,,i] <- A2
-  }
-  saveRDS(A2s, file.path(output_dir, pu(case, "A2s.rds")))
-
-  # compute diag statistic for each matrix
-  ds1 <- apply(A1s, 3, diag_stat)
-  ds2 <- apply(A2s, 3, diag_stat)
-  
-  # compute effective sample size for statistic
-  if(max(ds1)>min(ds1)){
-    ess1 <- round(N/(1+2*sum(acf(ds1)$acf)), 2)
-  } else {ess1 <- 0}
-  if(max(ds2)>min(ds2)){
-    ess2 <- round(N/(1+2*sum(acf(ds2)$acf)), 2)
-  } else {ess2 <- 0}
-  
-  cor(ds1[1:(N-1)], ds1[2:N])
-  
-  # compute dissimilarity
-  diss1 <- apply(A1s, c(3), function(X){sum(abs(X-A))})
-  diss2 <- apply(A2s, c(3), function(X){sum(abs(X-A))})
-  
-  # compute heterogeneity statistic
-  hetero_1 <- hetero_stat(A1s)
-  hetero_2 <- hetero_stat(A2s)
-  
-  # make dataframe
-  df <- data.frame(method=c(rep("Swap",N), rep("Curveball",N)), iter=rep(1:N,2), stat=c(ds1, ds2), dissim=c(diss1, diss2), hetero=c(hetero_1, hetero_2))
-  write.csv(df, file.path(output_dir, pu(case, "df.csv")))
-  
-  # Plots
-  ggplot(df, aes(x=iter, y=hetero, color=method)) + geom_point() + geom_line() + 
-    labs(title="Heterogeneity")
-  ggsave(pu(case, "traj_heterogeneity.png"), path=output_dir, height=5, width=30)
-  
-  ggplot(df, aes(x=iter, y=stat, color=method)) + geom_point() + geom_line() + 
-    labs(title=paste0("Effective Sample Sizes, Swap: ", ess1, " Curveball: ", ess2))
-  ggsave(pu(case, "traj_stat.png"), path=output_dir, height=5, width=30)
-  
-  ggplot(df, aes(x=iter, y=dissim, color=method)) + geom_point() + geom_line()
-  ggsave(pu(case, "traj_disssim.png"), path=output_dir, height=5, width=30)
-
-  png(file.path(output_dir, pu(case, "acf_swap.png")), height=5, width=6, units="in", res=240)
-  if(max(ds1)>min(ds1)){
-    acf(ds1, lag.max=lm, main="Swap")
-  }
-  dev.off()
-  
-  png(file.path(output_dir, pu(case, "acf_curveball.png")), height=5, width=6, units="in", res=240)
-  if(max(ds2)>min(ds2)){
-    acf(ds2, lag.max=lm, main="Curveball")
-  }
-  dev.off()
 }
 
 # Run each simulation. 
