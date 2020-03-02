@@ -23,20 +23,22 @@ pu <- function(...){
 ## sim parameters ##
 n <- m <- 50 # size of matrix
 # for density based A
-ps <- c(0.1, 0.25, 0.5, 0.75, 0.9) # fill densities of A
+#ps <- c(0.1, 0.25, 0.5, 0.75, 0.9) # fill densities of A
+ps <- c(0.25, 0.75) # fill densities of A
 # for deterministic power law A
-pows <- c(0.5, 1.0, 1.5, 2.0)  # power to use for power law margins
+#pows <- c(0.5, 1.0, 1.5, 2.0)  # power to use for power law margins
+pows <- c(1.0)  # power to use for power law margins
 fill <- 0.1  # desired density for the power law margins (can't always achieve this)
 # for block defined A
 block_size <- c(10, 40)
 block_deg <- c(10, 1)
 # weights for W's
-wss <- c("uniform", "runif", "exp", "runif2", "power")  # weighting schemes
+wss <- c("uniform", "runif", "exp", "runif2")  # weighting schemes
 # struct zero schemes
 zss <- c("none", "runif.10", "runif.25", "runif.50", "tri.10", "tri.25", "tri.50")  # zero schemes
 # MCMC stuff
-#N <- 10000  # iterations per case
-N <- 60  # iterations per case
+N <- 10000  # iterations per case
+#N <- 60  # iterations per case
 seeds <- c(1272, 2728, 3972, 4133, 5112, 6342, 7104, 8712, 9287, 10293)
 lm <- 5000  # Max lag in autocorrelation plots
 cores <- 7  # number of cores to parallelize over (must be 1 on Windows)
@@ -145,7 +147,7 @@ sim <- function(as, ws, zs){
       A1 <- swap(A1, W)
       A1s[,,i] <- A1
     }
-    saveRDS(A1s, file.path(output_dir, pu(case, seed, "A1s.rds")))
+#    saveRDS(A1s, file.path(output_dir, pu(case, seed, "A1s.rds")))
   
     # Do a bunch of curveball trades
     A2 <- A
@@ -156,7 +158,7 @@ sim <- function(as, ws, zs){
       A2 <- curveball_trade(A2, W)
       A2s[,,i] <- A2
     }
-    saveRDS(A2s, file.path(output_dir, pu(case, seed, "A2s.rds")))
+#    saveRDS(A2s, file.path(output_dir, pu(case, seed, "A2s.rds")))
   
     # compute diag statistic for each matrix
     ds1 <- apply(A1s, 3, diag_stat)
@@ -176,33 +178,34 @@ sim <- function(as, ws, zs){
     df <- data.frame(method=c(rep("Swap",N), rep("Curveball",N)), iter=rep(1:N,2), stat=c(ds1, ds2), dissim=c(diss1, diss2), hetero=c(hetero_1, hetero_2))
     write.csv(df, file.path(output_dir, pu(case, seed, "df.csv")))
     
-    # Plots
-    ggplot(df, aes(x=iter, y=hetero, color=method)) + geom_point() + geom_line() + 
-      labs(title="Heterogeneity")
-    ggsave(pu(case, seed, "traj_heterogeneity.png"), path=output_dir, height=5, width=30)
-    
-    ggplot(df, aes(x=iter, y=stat, color=method)) + geom_point() + geom_line() + 
-    ggsave(pu(case, seed, "traj_stat.png"), path=output_dir, height=5, width=30)
-    
-    ggplot(df, aes(x=iter, y=dissim, color=method)) + geom_point() + geom_line()
-    ggsave(pu(case, seed, "traj_disssim.png"), path=output_dir, height=5, width=30)
-  
-    png(file.path(output_dir, pu(case, seed, "acf_swap.png")), height=5, width=6, units="in", res=240)
-    if(max(ds1)>min(ds1)){
-      acf(ds1, lag.max=lm, main="Swap")
-    }
-    dev.off()
-    
-    png(file.path(output_dir, pu(case, seed, "acf_curveball.png")), height=5, width=6, units="in", res=240)
-    if(max(ds2)>min(ds2)){
-      acf(ds2, lag.max=lm, main="Curveball")
-    }
-    dev.off()
+#    # Plots
+#    ggplot(df, aes(x=iter, y=hetero, color=method)) + geom_point() + geom_line() + 
+#      labs(title="Heterogeneity")
+#    ggsave(pu(case, seed, "traj_heterogeneity.png"), path=output_dir, height=5, width=30)
+#    
+#    ggplot(df, aes(x=iter, y=stat, color=method)) + geom_point() + geom_line() + 
+#    ggsave(pu(case, seed, "traj_stat.png"), path=output_dir, height=5, width=30)
+#    
+#    ggplot(df, aes(x=iter, y=dissim, color=method)) + geom_point() + geom_line()
+#    ggsave(pu(case, seed, "traj_disssim.png"), path=output_dir, height=5, width=30)
+#  
+#    png(file.path(output_dir, pu(case, seed, "acf_swap.png")), height=5, width=6, units="in", res=240)
+#    if(max(ds1)>min(ds1)){
+#      acf(ds1, lag.max=lm, main="Swap")
+#    }
+#    dev.off()
+#    
+#    png(file.path(output_dir, pu(case, seed, "acf_curveball.png")), height=5, width=6, units="in", res=240)
+#    if(max(ds2)>min(ds2)){
+#      acf(ds2, lag.max=lm, main="Curveball")
+#    }
+#    dev.off()
   }
 }
 
 # Run each simulation. 
 params <- expand.grid(as, wss, zss)
+print(dim(params))
 colnames(params) <- c("as", "ws", "zs")
 mclapply(1:nrow(params), function(i) {do.call(sim, as.list(params[i,]))}, mc.cores=cores)
 
