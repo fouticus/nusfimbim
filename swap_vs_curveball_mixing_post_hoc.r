@@ -48,6 +48,8 @@ proc_file <- function(df_file){
   df$ws <- as.factor(params[[3]])
   zs <- params[[4]]
   df$zs <- as.factor(zs)
+  seed <- as.character(params[[5]])
+  df$seed <- seed
   if(grepl("\\.", zs)){
     zsv <- strsplit(zs, "\\.")[[1]]
     df$zs1 <- as.factor(zsv[1])
@@ -91,109 +93,108 @@ df <- do.call(rbind, dfs)
 write.csv(df, file=file.path(output_dir, pu("df.csv")))
 
 ### Plots
-
 # weights vs 1's density
 df %>% filter(zs=="none") %>%
-  ggplot(aes(x=iter, y=stat, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=stat, color=method, group=seed)) + geom_line() + 
   facet_grid(as~ws, scales="free_y") + 
   labs(title="Diag Statistic, Zero Scheme: None")
 ggsave(file.path(output_dir, pu("diag_as_vs_weight-scheme.png")), height=5, width=8)
 
 df %>% filter(zs=="none") %>%
-  ggplot(aes(x=iter, y=hetero, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=hetero, color=method, group=seed)) + geom_line() + 
   facet_grid(as~ws, scales="free_y") + 
   labs(title="Heterogeneity Statistic, Zero Scheme: None")
 ggsave(file.path(output_dir, pu("hetero_as_vs_weight-scheme.png")), height=5, width=8)
 
 # Zeros vs 1 density for uniform weights
 df %>% filter(ws=="uniform") %>%
-  ggplot(aes(x=iter, y=dissim, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=dissim, color=method, group=seed)) + geom_line() + 
   facet_grid(as~zs, scales="free_y") + 
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("dissim_as_vs_zero-scheme.png")), height=5, width=8)
 
 # Statistic trajectory for different zeros types
 df %>% filter(zs=="none", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=stat, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=stat, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") + 
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("diag_by_as_none.png")), height=5, width=8)
 
 df %>% filter(zs=="tri.10", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=stat, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=stat, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") + 
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("diag_by_as_tri.10.png")), height=5, width=8)
 
 df %>% filter(zs=="tri.25", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=stat, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=stat, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") +
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("diag_by_as_tri.25.png")), height=5, width=8)
 
 df %>% filter(zs=="tri.50", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=stat, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=stat, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") + 
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("diag_by_as_tri.50.png")), height=5, width=8)
 
 df %>% filter(zs=="runif.10", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=stat, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=stat, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") + 
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("diag_by_as_runif.1.png")), height=5, width=8)
 
 df %>% filter(zs=="runif.25", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=stat, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=stat, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") +
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("diag_by_as_runif.25.png")), height=5, width=8)
 
 df %>% filter(zs=="runif.50", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=stat, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=stat, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") + 
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("diag_by_as_runif.50.png")), height=5, width=8)
 
 # heterogeneity trajectory for different zeros types
 df %>% filter(zs=="none", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=hetero, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=hetero, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") + 
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("hetero_by_as_none.png")), height=5, width=8)
 
 df %>% filter(zs=="tri.10", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=hetero, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=hetero, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") + 
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("hetero_by_as_tri.10.png")), height=5, width=8)
 
 df %>% filter(zs=="tri.25", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=hetero, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=hetero, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") +
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("hetero_by_as_tri.25.png")), height=5, width=8)
 
 df %>% filter(zs=="tri.50", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=hetero, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=hetero, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") + 
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("hetero_by_as_tri.50.png")), height=5, width=8)
 
 df %>% filter(zs=="runif.10", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=hetero, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=hetero, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") + 
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("hetero_by_as_runif.1.png")), height=5, width=8)
 
 df %>% filter(zs=="runif.25", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=hetero, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=hetero, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") +
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("hetero_by_as_runif.25.png")), height=5, width=8)
 
 df %>% filter(zs=="runif.50", ws=="uniform") %>%
-  ggplot(aes(x=iter, y=hetero, color=method)) + geom_line() + 
+  ggplot(aes(x=iter, y=hetero, color=method, group=seed)) + geom_line() + 
   facet_grid(as~., scales="free_y") + 
   labs(title="Weight Scheme: Uniform")
 ggsave(file.path(output_dir, pu("hetero_by_as_runif.50.png")), height=5, width=8)
