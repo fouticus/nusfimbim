@@ -1,5 +1,7 @@
 # Non-Uniform Sampling of Fixed Margin Binary Matrices 
 
+A cleaner version of this code can be found [here](https://github.com/fouticus/nsfbm)
+
 This is the accompanying code to the paper submitted to 2020 Foundations of Data Science Conference in Seattle Wa, Oct 18-20, 2020.
 
 ## Abstract
