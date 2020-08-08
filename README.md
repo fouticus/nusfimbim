@@ -11,4 +11,4 @@ Whereas existing sampling methods have focused on uniform sampling from this spa
 We demonstrate that values of zero in the weight matrix, i.e. _structural zeros_ are generally problematic for swapping algorithms, except when they have special monotonic structure.
 We explore the properties of our algorithms through simulation studies, and illustrate the potential impact of employing a non-uniform null model using a classic bird habitation dataset.
 
-Here is the link to the [pre-published paper]()
+Here is the link to the [pre-published paper](https://arxiv.org/abs/2007.15043)
